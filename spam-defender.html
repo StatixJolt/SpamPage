@@ -223,79 +223,28 @@
 <footer>SPAM DEFENDER • KEEP VOLUME AT MAX FOR BEST RESULTS</footer>
 
 <script>
-// ── Sound definitions ─────────────────────────────────────────────────────────
-// segments: { beeps:[{freq,dur,gap}], text, pauseAfter }
-
-const SOUNDS = [
-  {
-    label: "FTC Complaint Hotline",
-    segments: [
-      { beeps:[{freq:880,dur:0.12,gap:0.08},{freq:880,dur:0.12,gap:0.08},{freq:1100,dur:0.28,gap:0}], pauseAfter:600,  text:"" },
-      { pauseAfter:350, text:"Thank you for calling the Federal Trade Commission Consumer Fraud Reporting Hotline." },
-      { pauseAfter:400, text:"Your call has been automatically flagged and assigned case number 4-4-7-dash-F-T-C-dash-2 for investigative review." },
-      { pauseAfter:350, text:"Caller ID, call origin data, and carrier routing information have been captured and logged to your open complaint file." },
-      { pauseAfter:300, text:"If you are a telemarketer or third-party calling service, be advised: this number is registered on the National Do Not Call Registry and has an active complaint on file." },
-      { pauseAfter:300, text:"Continued unsolicited contact may result in civil penalties of up to fifty thousand dollars per violation." },
-      { pauseAfter:350, text:"To speak with a compliance officer, please remain on the line. Otherwise, remove this number from all contact lists immediately." },
-      { beeps:[{freq:440,dur:0.22,gap:0.12},{freq:440,dur:0.22,gap:0}], pauseAfter:0, text:"" }
-    ]
-  },
-  {
-    label: "Fraud Investigation Unit",
-    segments: [
-      { beeps:[{freq:660,dur:0.08,gap:0.06},{freq:880,dur:0.08,gap:0.06},{freq:1100,dur:0.18,gap:0}], pauseAfter:500, text:"" },
-      { pauseAfter:350, text:"You have reached the Fraud and Telemarketing Investigation Unit." },
-      { pauseAfter:350, text:"This line is actively monitored. All calls are recorded in their entirety for investigative and evidentiary purposes." },
-      { pauseAfter:350, text:"Your originating number, call metadata, and carrier information have been automatically submitted to our case management system." },
-      { pauseAfter:350, text:"If this call was made in connection with an unsolicited sales, marketing, or robocall campaign, you may be subject to an active investigation." },
-      { pauseAfter:300, text:"If you have reached this number in error, hang up immediately and remove it from all calling lists." },
-      { pauseAfter:300, text:"Failure to do so constitutes knowing and willful violation of the Telephone Consumer Protection Act." },
-      { beeps:[{freq:330,dur:0.3,gap:0.12},{freq:330,dur:0.3,gap:0}], pauseAfter:0, text:"" }
-    ]
-  },
-  {
-    label: "Carrier Spam Scan",
-    segments: [
-      { beeps:[{freq:1200,dur:0.06,gap:0.04},{freq:900,dur:0.06,gap:0.04},{freq:1200,dur:0.06,gap:0.04},{freq:900,dur:0.1,gap:0}], pauseAfter:400, text:"" },
-      { pauseAfter:400, text:"Automated spam detection system active." },
-      { pauseAfter:500, text:"Scanning inbound caller ID against national robocall and telemarketer registries." },
-      { beeps:[{freq:1400,dur:0.05,gap:0.03},{freq:1400,dur:0.05,gap:0.03},{freq:1400,dur:0.05,gap:0.03},{freq:1650,dur:0.18,gap:0}], pauseAfter:500, text:"" },
-      { pauseAfter:300, text:"Match found. Your number has been flagged in multiple consumer complaint databases." },
-      { pauseAfter:350, text:"A report including your caller ID, timestamp, and call routing data is being filed with your carrier and submitted to the FTC, FCC, and state consumer protection offices." },
-      { pauseAfter:300, text:"This number has been added to the community spam block list and will be automatically rejected by participating carriers." },
-      { pauseAfter:300, text:"To remove yourself from our complaint filing queue, hang up now and do not contact this number again." },
-      { beeps:[{freq:500,dur:0.18,gap:0.1},{freq:380,dur:0.28,gap:0}], pauseAfter:0, text:"" }
-    ]
-  },
-  {
-    label: "Legal Compliance Notice",
-    segments: [
-      { beeps:[{freq:770,dur:0.2,gap:0.12},{freq:770,dur:0.2,gap:0}], pauseAfter:600, text:"" },
-      { pauseAfter:350, text:"You have reached the telemarketing compliance intake line of a consumer protection law office." },
-      { pauseAfter:350, text:"This number belongs to a client who has retained legal representation regarding unsolicited telemarketing contact." },
-      { pauseAfter:350, text:"All calls to this number are recorded and reviewed by legal staff. Your caller ID and call data have been logged." },
-      { pauseAfter:300, text:"Under the Telephone Consumer Protection Act and applicable state laws, unsolicited calls to this number may expose your organization to statutory damages of five hundred to fifteen hundred dollars per call." },
-      { pauseAfter:300, text:"This number is registered on the National Do Not Call Registry. Remove it from all lists immediately. A cease-and-desist may be issued." },
-      { beeps:[{freq:660,dur:0.22,gap:0.1},{freq:440,dur:0.3,gap:0}], pauseAfter:0, text:"" }
-    ]
-  },
-  {
-    label: "Remove From List",
-    segments: [
-      { pauseAfter:300, text:"Hello. I believe you have dialed this number in error." },
-      { pauseAfter:300, text:"This is a private residence. We do not accept unsolicited calls, and this number is registered on the National Do Not Call Registry." },
-      { pauseAfter:300, text:"I am formally requesting that you remove this number from your calling list, any affiliated lists, and all third-party data sources you share with." },
-      { pauseAfter:300, text:"This request is effective immediately and is being recorded. Do not contact this number again. Thank you." },
-      { beeps:[{freq:550,dur:0.18,gap:0.1},{freq:550,dur:0.18,gap:0}], pauseAfter:0, text:"" }
-    ]
-  }
-];
-
-// ── Web Audio for beeps ───────────────────────────────────────────────────────
+// ── iOS Speech Unlock + Web Audio for beeps ───────────────────────────────────
 let audioCtx = null;
+let speechUnlocked = false;
+let volume = 1.0;
+let currentBtnIndex = null;
+let stopRequested = false;
+
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
+}
+
+function unlockSpeech() {
+  if (speechUnlocked) return Promise.resolve();
+  return new Promise(resolve => {
+    const utt = new SpeechSynthesisUtterance('');
+    utt.volume = 0;
+    utt.onend = () => { speechUnlocked = true; resolve(); };
+    utt.onerror = () => { speechUnlocked = true; resolve(); };
+    window.speechSynthesis.speak(utt);
+    setTimeout(() => { speechUnlocked = true; resolve(); }, 500);
+  });
 }
 
 function playBeeps(beeps) {
@@ -320,11 +269,6 @@ function playBeeps(beeps) {
     setTimeout(resolve, total * 1000 + 60);
   });
 }
-
-// ── Speech ────────────────────────────────────────────────────────────────────
-let volume = 1.0;
-let currentBtnIndex = null;
-let stopRequested = false;
 
 function setVolume(val) {
   volume = val / 100;
@@ -378,6 +322,10 @@ async function playSound(index) {
   stopAll();
   await wait(150);
   stopRequested = false;
+
+  // Unlock speech synthesis on iOS — must happen right at tap time
+  await unlockSpeech();
+
   currentBtnIndex = index;
   setPlaying(index, true);
   updateStatus('▶ PLAYING: ' + SOUNDS[index].label.toUpperCase(), true);
