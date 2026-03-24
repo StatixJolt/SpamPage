@@ -84,7 +84,6 @@
     transition: all 0.15s; text-align: left; position: relative; overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
-
   .sound-btn::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent); opacity:0; transition:opacity 0.2s; }
   .sound-btn:active, .sound-btn.playing { background:#161c24; border-color:var(--accent); transform:scale(0.985); }
   .sound-btn.playing::before { opacity:1; }
@@ -137,8 +136,8 @@
 <header>
   <div class="logo-icon">🚫</div>
   <div class="header-text">
-    <h1>Spam Defender V2</h1>
-    <p>ANTI-SPAM AUDIO TOOLKIT</p>
+    <h1>Spam Defender</h1>
+    <p>ANTI-SPAM AUDIO TOOLKIT v3</p>
   </div>
 </header>
 
@@ -223,18 +222,85 @@
 <footer>SPAM DEFENDER • KEEP VOLUME AT MAX FOR BEST RESULTS</footer>
 
 <script>
-// ── iOS Speech Unlock + Web Audio for beeps ───────────────────────────────────
+const SOUNDS = [
+  {
+    label: "FTC Complaint Hotline",
+    segments: [
+      { beeps:[{freq:880,dur:0.12,gap:0.08},{freq:880,dur:0.12,gap:0.08},{freq:1100,dur:0.28,gap:0}], pauseAfter:600, text:"" },
+      { beeps:[], pauseAfter:350, text:"Thank you for calling the Federal Trade Commission Consumer Fraud Reporting Hotline." },
+      { beeps:[], pauseAfter:400, text:"Your call has been automatically flagged and assigned case number 4-4-7-dash-F-T-C-dash-2 for investigative review." },
+      { beeps:[], pauseAfter:350, text:"Caller ID, call origin data, and carrier routing information have been captured and logged to your open complaint file." },
+      { beeps:[], pauseAfter:300, text:"If you are a telemarketer or third-party calling service, be advised: this number is registered on the National Do Not Call Registry and has an active complaint on file." },
+      { beeps:[], pauseAfter:300, text:"Continued unsolicited contact may result in civil penalties of up to fifty thousand dollars per violation." },
+      { beeps:[], pauseAfter:350, text:"To speak with a compliance officer, please remain on the line. Otherwise, remove this number from all contact lists immediately." },
+      { beeps:[{freq:440,dur:0.22,gap:0.12},{freq:440,dur:0.22,gap:0}], pauseAfter:0, text:"" }
+    ]
+  },
+  {
+    label: "Fraud Investigation Unit",
+    segments: [
+      { beeps:[{freq:660,dur:0.08,gap:0.06},{freq:880,dur:0.08,gap:0.06},{freq:1100,dur:0.18,gap:0}], pauseAfter:500, text:"" },
+      { beeps:[], pauseAfter:350, text:"You have reached the Fraud and Telemarketing Investigation Unit." },
+      { beeps:[], pauseAfter:350, text:"This line is actively monitored. All calls are recorded in their entirety for investigative and evidentiary purposes." },
+      { beeps:[], pauseAfter:350, text:"Your originating number, call metadata, and carrier information have been automatically submitted to our case management system." },
+      { beeps:[], pauseAfter:350, text:"If this call was made in connection with an unsolicited sales, marketing, or robocall campaign, you may be subject to an active investigation." },
+      { beeps:[], pauseAfter:300, text:"If you have reached this number in error, hang up immediately and remove it from all calling lists." },
+      { beeps:[], pauseAfter:300, text:"Failure to do so constitutes knowing and willful violation of the Telephone Consumer Protection Act." },
+      { beeps:[{freq:330,dur:0.3,gap:0.12},{freq:330,dur:0.3,gap:0}], pauseAfter:0, text:"" }
+    ]
+  },
+  {
+    label: "Carrier Spam Scan",
+    segments: [
+      { beeps:[{freq:1200,dur:0.06,gap:0.04},{freq:900,dur:0.06,gap:0.04},{freq:1200,dur:0.06,gap:0.04},{freq:900,dur:0.1,gap:0}], pauseAfter:400, text:"" },
+      { beeps:[], pauseAfter:400, text:"Automated spam detection system active." },
+      { beeps:[], pauseAfter:500, text:"Scanning inbound caller ID against national robocall and telemarketer registries." },
+      { beeps:[{freq:1400,dur:0.05,gap:0.03},{freq:1400,dur:0.05,gap:0.03},{freq:1400,dur:0.05,gap:0.03},{freq:1650,dur:0.18,gap:0}], pauseAfter:500, text:"" },
+      { beeps:[], pauseAfter:300, text:"Match found. Your number has been flagged in multiple consumer complaint databases." },
+      { beeps:[], pauseAfter:350, text:"A report including your caller ID, timestamp, and call routing data is being filed with your carrier and submitted to the FTC, FCC, and state consumer protection offices." },
+      { beeps:[], pauseAfter:300, text:"This number has been added to the community spam block list and will be automatically rejected by participating carriers." },
+      { beeps:[], pauseAfter:300, text:"To remove yourself from our complaint filing queue, hang up now and do not contact this number again." },
+      { beeps:[{freq:500,dur:0.18,gap:0.1},{freq:380,dur:0.28,gap:0}], pauseAfter:0, text:"" }
+    ]
+  },
+  {
+    label: "Legal Compliance Notice",
+    segments: [
+      { beeps:[{freq:770,dur:0.2,gap:0.12},{freq:770,dur:0.2,gap:0}], pauseAfter:600, text:"" },
+      { beeps:[], pauseAfter:350, text:"You have reached the telemarketing compliance intake line of a consumer protection law office." },
+      { beeps:[], pauseAfter:350, text:"This number belongs to a client who has retained legal representation regarding unsolicited telemarketing contact." },
+      { beeps:[], pauseAfter:350, text:"All calls to this number are recorded and reviewed by legal staff. Your caller ID and call data have been logged." },
+      { beeps:[], pauseAfter:300, text:"Under the Telephone Consumer Protection Act and applicable state laws, unsolicited calls to this number may expose your organization to statutory damages of five hundred to fifteen hundred dollars per call." },
+      { beeps:[], pauseAfter:300, text:"This number is registered on the National Do Not Call Registry. Remove it from all lists immediately. A cease-and-desist may be issued." },
+      { beeps:[{freq:660,dur:0.22,gap:0.1},{freq:440,dur:0.3,gap:0}], pauseAfter:0, text:"" }
+    ]
+  },
+  {
+    label: "Remove From List",
+    segments: [
+      { beeps:[], pauseAfter:300, text:"Hello. I believe you have dialed this number in error." },
+      { beeps:[], pauseAfter:300, text:"This is a private residence. We do not accept unsolicited calls, and this number is registered on the National Do Not Call Registry." },
+      { beeps:[], pauseAfter:300, text:"I am formally requesting that you remove this number from your calling list, any affiliated lists, and all third-party data sources you share with." },
+      { beeps:[], pauseAfter:300, text:"This request is effective immediately and is being recorded. Do not contact this number again. Thank you." },
+      { beeps:[{freq:550,dur:0.18,gap:0.1},{freq:550,dur:0.18,gap:0}], pauseAfter:0, text:"" }
+    ]
+  }
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
 let audioCtx = null;
 let speechUnlocked = false;
 let volume = 1.0;
 let currentBtnIndex = null;
 let stopRequested = false;
 
+// ── Audio context ─────────────────────────────────────────────────────────────
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
 
+// ── iOS speech unlock — must fire synchronously inside the tap handler ────────
 function unlockSpeech() {
   if (speechUnlocked) return Promise.resolve();
   return new Promise(resolve => {
@@ -243,10 +309,12 @@ function unlockSpeech() {
     utt.onend = () => { speechUnlocked = true; resolve(); };
     utt.onerror = () => { speechUnlocked = true; resolve(); };
     window.speechSynthesis.speak(utt);
-    setTimeout(() => { speechUnlocked = true; resolve(); }, 500);
+    // Fallback timeout in case onend never fires
+    setTimeout(() => { speechUnlocked = true; resolve(); }, 400);
   });
 }
 
+// ── Beeps ─────────────────────────────────────────────────────────────────────
 function playBeeps(beeps) {
   return new Promise(resolve => {
     if (!beeps || beeps.length === 0) { resolve(); return; }
@@ -255,14 +323,16 @@ function playBeeps(beeps) {
     beeps.forEach(b => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
       osc.frequency.value = b.freq;
       osc.type = 'sine';
       gain.gain.setValueAtTime(0, t);
       gain.gain.linearRampToValueAtTime(volume * 0.4, t + 0.01);
       gain.gain.setValueAtTime(volume * 0.4, t + b.dur - 0.01);
       gain.gain.linearRampToValueAtTime(0, t + b.dur);
-      osc.start(t); osc.stop(t + b.dur);
+      osc.start(t);
+      osc.stop(t + b.dur);
       t += b.dur + b.gap;
     });
     const total = beeps.reduce((s, b) => s + b.dur + b.gap, 0);
@@ -270,6 +340,28 @@ function playBeeps(beeps) {
   });
 }
 
+// ── Speech ────────────────────────────────────────────────────────────────────
+function speakText(text) {
+  return new Promise(resolve => {
+    if (!text || !text.trim()) { resolve(); return; }
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.volume = volume;
+    utt.rate = 0.90;
+    utt.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const v = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US English') || (v.lang === 'en-US' && v.name.includes('Google')))
+           || voices.find(v => v.lang === 'en-US')
+           || null;
+    if (v) utt.voice = v;
+    utt.onend = resolve;
+    utt.onerror = resolve;
+    window.speechSynthesis.speak(utt);
+  });
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
 function setVolume(val) {
   volume = val / 100;
   document.getElementById('volVal').textContent = val + '%';
@@ -284,8 +376,13 @@ function setPlaying(index, playing) {
   SOUNDS.forEach((_, i) => {
     const btn = document.getElementById('btn' + i);
     const dur = document.getElementById('dur' + i);
-    if (playing && i === index) { btn.classList.add('playing'); dur.textContent = '●'; }
-    else { btn.classList.remove('playing'); dur.textContent = '▶'; }
+    if (playing && i === index) {
+      btn.classList.add('playing');
+      dur.textContent = '●';
+    } else {
+      btn.classList.remove('playing');
+      dur.textContent = '▶';
+    }
   });
   document.getElementById('stopBtn').disabled = !playing;
 }
@@ -298,32 +395,17 @@ function stopAll() {
   currentBtnIndex = null;
 }
 
-function speakText(text) {
-  return new Promise(resolve => {
-    if (!text || !text.trim()) { resolve(); return; }
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.volume = volume;
-    utt.rate = 0.90;
-    utt.pitch = 1.0;
-    const voices = window.speechSynthesis.getVoices();
-    const v = voices.find(v => v.name.includes('Samantha') || v.name.includes('Google US English') || (v.lang === 'en-US' && v.name.includes('Google')))
-           || voices.find(v => v.lang === 'en-US') || null;
-    if (v) utt.voice = v;
-    utt.onend = resolve;
-    utt.onerror = resolve;
-    window.speechSynthesis.speak(utt);
-  });
-}
-
-function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
+// ── Main play function ────────────────────────────────────────────────────────
 async function playSound(index) {
+  // Tap same button to stop
   if (currentBtnIndex === index) { stopAll(); return; }
+
+  // Stop anything currently playing
   stopAll();
   await wait(150);
   stopRequested = false;
 
-  // Unlock speech synthesis on iOS — must happen right at tap time
+  // Unlock iOS speech synthesis right here inside the user gesture
   await unlockSpeech();
 
   currentBtnIndex = index;
@@ -346,9 +428,10 @@ async function playSound(index) {
   }
 }
 
-// iOS async voice load fix
+// iOS: voices load asynchronously
 if (window.speechSynthesis) {
   window.speechSynthesis.onvoiceschanged = () => {};
+  // Keep speech synthesis alive on iOS (pauses after ~30s otherwise)
   setInterval(() => {
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.pause();
